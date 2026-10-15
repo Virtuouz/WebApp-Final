@@ -1,193 +1,84 @@
-// =============================================================================
-// app.js — the frontend. Runs in the browser.
+// app.js runs in the browser.
 //
-// The browser NEVER talks to the database directly. It sends HTTP requests
-// with fetch() to our function at /api/items, and the function talks to the
-// database. That keeps the database private and safe.
-// =============================================================================
+// The browser can't talk to the database directly. Instead, it uses fetch()
+// to send a message to one of our Netlify Functions (in netlify/functions/),
+// and the function talks to the database.
+//
+// "async" and "await" are needed whenever we talk to the server.
+// "await" just means: wait for the server to answer before moving on.
 
-const API = "/api/items";
 
-// Grab the elements we need from index.html
-const form = document.getElementById("item-form");
-const idInput = document.getElementById("item-id");
-const titleInput = document.getElementById("title");
-const notesInput = document.getElementById("notes");
-const submitBtn = document.getElementById("submit-btn");
-const cancelBtn = document.getElementById("cancel-btn");
-const list = document.getElementById("item-list");
-const message = document.getElementById("message");
+// READ: get all the items from the server and show them on the page
+async function loadItems() {
+  const response = await fetch("/api/get-items");
+  const items = await response.json();
 
-// -----------------------------------------------------------------------------
-// API calls — one small function per CRUD operation
-// -----------------------------------------------------------------------------
+  const list = document.getElementById("item-list");
+  list.innerHTML = "";
 
-async function getItems() {
-  const res = await fetch(API);
-  return handle(res);
+  for (const item of items) {
+    list.innerHTML += `
+      <li>
+        <span>${item.title}</span>
+        <button onclick="editItem(${item.id})">Edit</button>
+        <button onclick="deleteItem(${item.id})">Delete</button>
+      </li>
+    `;
+  }
 }
 
-async function createItem(item) {
-  const res = await fetch(API, {
+
+// CREATE: add a new item using the text in the input box
+async function addItem() {
+  const input = document.getElementById("title-input");
+  const title = input.value;
+
+  if (title === "") {
+    alert("Please type something first!");
+    return;
+  }
+
+  await fetch("/api/add-item", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(item),
+    body: JSON.stringify({ title: title }),
   });
-  return handle(res);
+
+  input.value = "";
+  loadItems();
 }
 
-async function updateItem(id, item) {
-  const res = await fetch(`${API}/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(item),
+
+// UPDATE: ask for a new title, then save it
+async function editItem(id) {
+  const newTitle = prompt("Enter the new title:");
+
+  if (newTitle === null || newTitle === "") {
+    return;
+  }
+
+  await fetch("/api/update-item", {
+    method: "POST",
+    body: JSON.stringify({ id: id, title: newTitle }),
   });
-  return handle(res);
+
+  loadItems();
 }
 
+
+// DELETE: remove an item
 async function deleteItem(id) {
-  const res = await fetch(`${API}/${id}`, { method: "DELETE" });
-  return handle(res);
-}
-
-// Turns a fetch Response into data, or throws with the server's error message
-async function handle(res) {
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Request failed");
-  return data;
-}
-
-// -----------------------------------------------------------------------------
-// Rendering — draw the list on the page
-// -----------------------------------------------------------------------------
-
-async function render() {
-  try {
-    const items = await getItems();
-    list.replaceChildren(); // clear the old list
-
-    if (items.length === 0) {
-      const empty = document.createElement("li");
-      empty.className = "empty";
-      empty.textContent = "No items yet. Add one above.";
-      list.append(empty);
-      return;
-    }
-
-    for (const item of items) {
-      list.append(renderItem(item));
-    }
-  } catch (err) {
-    showMessage(err.message, true);
+  if (!confirm("Are you sure you want to delete this?")) {
+    return;
   }
-}
 
-function renderItem(item) {
-  const li = document.createElement("li");
-  if (item.done) li.classList.add("done");
-
-  // Checkbox toggles "done" (an Update)
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.checked = item.done;
-  checkbox.addEventListener("change", async () => {
-    await run(() => updateItem(item.id, { ...item, done: checkbox.checked }));
+  await fetch("/api/delete-item", {
+    method: "POST",
+    body: JSON.stringify({ id: id }),
   });
 
-  // Use textContent (not innerHTML) so user text can't inject HTML
-  const text = document.createElement("div");
-  text.className = "text";
-  const title = document.createElement("strong");
-  title.textContent = item.title;
-  text.append(title);
-  if (item.notes) {
-    const notes = document.createElement("p");
-    notes.textContent = item.notes;
-    text.append(notes);
-  }
-
-  const editBtn = document.createElement("button");
-  editBtn.textContent = "Edit";
-  editBtn.addEventListener("click", () => startEditing(item));
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.textContent = "Delete";
-  deleteBtn.className = "danger";
-  deleteBtn.addEventListener("click", async () => {
-    if (confirm(`Delete "${item.title}"?`)) {
-      await run(() => deleteItem(item.id));
-    }
-  });
-
-  li.append(checkbox, text, editBtn, deleteBtn);
-  return li;
+  loadItems();
 }
 
-// -----------------------------------------------------------------------------
-// Form handling — Create or Update depending on whether we're editing
-// -----------------------------------------------------------------------------
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault(); // stop the page from reloading
-
-  const item = {
-    title: titleInput.value,
-    notes: notesInput.value,
-  };
-
-  const id = idInput.value;
-  let ok;
-  if (id) {
-    const existing = JSON.parse(form.dataset.editing);
-    ok = await run(() => updateItem(id, { ...existing, ...item }));
-  } else {
-    ok = await run(() => createItem(item));
-  }
-  if (ok) resetForm(); // keep what they typed if something went wrong
-});
-
-cancelBtn.addEventListener("click", resetForm);
-
-function startEditing(item) {
-  idInput.value = item.id;
-  titleInput.value = item.title;
-  notesInput.value = item.notes ?? "";
-  form.dataset.editing = JSON.stringify(item);
-  submitBtn.textContent = "Save changes";
-  cancelBtn.hidden = false;
-  titleInput.focus();
-}
-
-function resetForm() {
-  form.reset();
-  idInput.value = "";
-  delete form.dataset.editing;
-  submitBtn.textContent = "Add item";
-  cancelBtn.hidden = true;
-}
-
-// -----------------------------------------------------------------------------
-// Helpers
-// -----------------------------------------------------------------------------
-
-// Run an API action, then refresh the list. Shows errors on the page.
-// Returns true if it worked, false if it failed.
-async function run(action) {
-  try {
-    await action();
-    showMessage("");
-    await render();
-    return true;
-  } catch (err) {
-    showMessage(err.message, true);
-    return false;
-  }
-}
-
-function showMessage(text, isError = false) {
-  message.textContent = text;
-  message.className = isError ? "error" : "";
-}
-
-// Load the list when the page opens
-render();
+// Show the items as soon as the page opens
+loadItems();

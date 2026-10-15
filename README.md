@@ -1,276 +1,205 @@
 # CRUD Starter
 
-A starter project for building a live web app that can **C**reate, **R**ead,
-**U**pdate, and **D**elete data.
-
-- **Frontend:** plain HTML, CSS, and JavaScript in `src/`
-- **Backend:** a Netlify Function in `netlify/functions/`
-- **Database:** Netlify Database (Postgres), set up by a migration in `netlify/database/migrations/`
-
-It already works out of the box: a simple list of "items" you can add, edit,
-check off, and delete. Your job is to turn it into your own app.
+A simple website that can **C**reate, **R**ead, **U**pdate, and **D**elete items
+saved in a real database. Your job is to turn it into your own app.
 
 ---
 
-## How the pieces fit together
+## What's in this project
 
 ```
-  Browser (src/app.js)
-        │   fetch("/api/items", { method: "POST", ... })
-        ▼
-  Netlify Function (netlify/functions/items.mjs)
-        │   db.sql`INSERT INTO items ...`
-        ▼
-  Netlify Database (Postgres)
+src/                     ← your website (HTML, CSS, JavaScript)
+  index.html
+  styles.css
+  app.js
+
+netlify/functions/       ← your "backend" (talks to the database)
+  get-items.mjs          ← READ   all items
+  add-item.mjs           ← CREATE an item
+  update-item.mjs        ← UPDATE an item
+  delete-item.mjs        ← DELETE an item
+
+netlify/database/migrations/
+  .../migration.sql      ← creates the "items" table in the database
 ```
 
-The browser **never** talks to the database directly. It sends HTTP requests to
-your function, and the function runs SQL. This keeps your database private.
-
-| What you do in the app | HTTP request             | SQL it runs |
-| ---------------------- | ------------------------ | ----------- |
-| Load the list          | `GET /api/items`         | `SELECT`    |
-| Add an item            | `POST /api/items`        | `INSERT`    |
-| Edit / check off       | `PUT /api/items/5`       | `UPDATE`    |
-| Delete                 | `DELETE /api/items/5`    | `DELETE`    |
-
----
-
-## Project structure
+**How it works:** when you click a button, `app.js` uses `fetch()` to send a
+message to one of the functions. The function runs some SQL on the database
+and sends an answer back. The browser never talks to the database directly.
 
 ```
-crud-starter/
-├── netlify/
-│   ├── functions/
-│   │   └── items.mjs            ← backend: handles /api/items
-│   └── database/
-│       └── migrations/
-│           └── ..._create-items/
-│               └── migration.sql   ← creates the items table
-├── src/                         ← everything here is your public website
-│   ├── index.html
-│   ├── app.js
-│   └── styles.css
-├── netlify.toml                 ← tells Netlify where src/ and functions/ are
-├── package.json                 ← dependencies + shortcut commands
-├── .gitignore
-└── README.md
+app.js  ──fetch("/api/add-item")──▶  add-item.mjs  ──INSERT──▶  database
 ```
 
 ---
 
-## One-time setup
+## Setup (do this once)
 
-### 1. Install Node.js
+1. Install **Node.js** (version 22.13 or newer) from <https://nodejs.org>.
+2. Open a terminal in this project folder and run:
 
-You need **Node.js version 22.13 or newer**. Download the LTS version from
-<https://nodejs.org>.
+   ```bash
+   npm install
+   ```
 
-Check it worked by opening a terminal and running:
+3. Log in to Netlify:
+
+   ```bash
+   npm run login
+   ```
+
+---
+
+## Running it on your computer
+
+1. Start the website:
+
+   ```bash
+   npm run dev
+   ```
+
+   Then open <http://localhost:8888>. Leave this terminal running.
+
+2. **First time only:** open a **second terminal** and create the database table:
+
+   ```bash
+   npm run db:migrate
+   ```
+
+3. Refresh the page. You should be able to add, edit, and delete items!
+
+If you save a file and don't see the change, refresh the browser.
+
+---
+
+## Putting it on the internet
+
+Test it with a preview link first:
 
 ```bash
-node -v
+npm run deploy:preview
 ```
 
-You should see `v22.13.0` or higher.
+The first time, choose **create a new project**. It will print a link you can open.
 
-### 2. Install the project
-
-In a terminal, go into this project folder and run:
+When you're happy with it, publish the real site:
 
 ```bash
-npm install
+npm run deploy:prod
 ```
 
-This downloads everything the project needs, including the Netlify CLI, into a
-`node_modules` folder. (You don't need to install Netlify globally.)
+> ⚠️ Don't run `deploy:prod` too often. The free Netlify plan has a monthly limit.
+> Do your testing with `npm run dev` instead.
 
-### 3. Log in to Netlify
-
-```bash
-npm run login
-```
-
-A browser window opens. Log in with your Netlify account and authorize the CLI.
+Your live site has its **own** database, separate from the one on your computer.
+You can see the live data in the Netlify dashboard under
+**Data & Storage → Database**.
 
 ---
 
-## Working on your app (every day)
+## Making it your own
 
-### Start the dev server
+### Changing the look
 
-```bash
-npm run dev
+Edit `src/index.html` and `src/styles.css` like any other website.
+
+### Adding a new column (example: a "price" for each item)
+
+You need to change **four** places:
+
+**1. The database table.** In `migration.sql`, add the new column:
+
+```sql
+CREATE TABLE items (
+  id    SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  price TEXT
+);
 ```
 
-Open <http://localhost:8888>. This runs your website, your function, **and a
-local database** on your own computer. Nothing you do here affects the live site.
-
-Leave this terminal running. Open a **second terminal** for the commands below.
-
-> **Saved a file but nothing changed?** Refresh the browser. Changes to the
-> function reload automatically. If things get weird, stop the server with
-> `Ctrl + C` and run `npm run dev` again.
-
-### Set up the local database (first time only)
-
-With the dev server running, in your second terminal:
-
-```bash
-npm run db:migrate
-```
-
-This creates the `items` table in your local database. You need to do this once,
-and again any time you add a new migration.
-
----
-
-## Database commands
-
-Run these in a second terminal **while `npm run dev` is running**.
-
-| Command | What it does |
-| ------- | ------------ |
-| `npm run db:migrate` | Apply any new migrations to your local database |
-| `npm run db:status` | Show which migrations have been applied |
-| `npm run db:query` | Open a SQL prompt to your local database (type `\q` to quit) |
-| `npm run db:query -- --query "SELECT * FROM items"` | Run one SQL query and print the result |
-| `npm run db:reset` | **Wipe** your local database and start fresh (then run `db:migrate`) |
-| `npm run db:new -- "describe the change"` | Create a new, empty migration file |
-
-These commands only affect your **local** database, never the live one.
-
----
-
-## Changing your database table
-
-Want different columns? Here's the rule:
-
-> **Never edit a migration after it has been deployed.** Make a new one instead.
-
-**Before your first deploy**, you can freely edit the existing
-`migration.sql`. Then wipe and rebuild your local database:
+Then rebuild your local database (with `npm run dev` running):
 
 ```bash
 npm run db:reset
 npm run db:migrate
 ```
 
-**After you've deployed**, create a new migration:
+**2. The HTML.** Add another input box in `index.html`:
 
-```bash
-npm run db:new -- "add priority column"
+```html
+<input type="text" id="price-input" placeholder="Price">
 ```
 
-That creates a new folder in `netlify/database/migrations/` with an empty
-`migration.sql`. Write your SQL in it, for example:
+**3. The JavaScript.** In `addItem()` in `app.js`, read the new box and send it:
+
+```js
+const price = document.getElementById("price-input").value;
+
+await fetch("/api/add-item", {
+  method: "POST",
+  body: JSON.stringify({ title: title, price: price }),
+});
+```
+
+And show it in `loadItems()`:
+
+```js
+<span>${item.title} - $${item.price}</span>
+```
+
+**4. The function.** In `add-item.mjs`, save the new value:
+
+```js
+await db.sql`INSERT INTO items (title, price) VALUES (${data.title}, ${data.price})`;
+```
+
+### ⚠️ Already deployed to production?
+
+Once your site is live, **don't edit the old `migration.sql` anymore**. Make a
+new migration instead:
+
+```bash
+npm run db:new -- "add price column"
+```
+
+This creates a new `migration.sql` file in a new folder. Put your change in it:
 
 ```sql
-ALTER TABLE items ADD COLUMN priority INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE items ADD COLUMN price TEXT;
 ```
 
-Then apply it locally:
-
-```bash
-npm run db:migrate
-```
-
-When you deploy, Netlify applies new migrations to the live database
-automatically.
-
-> If you rename the table or add columns, remember to update the SQL in
-> `netlify/functions/items.mjs` **and** the form and list in `src/`.
+Then run `npm run db:migrate`. Netlify will apply it to your live database the
+next time you deploy.
 
 ---
 
-## Writing SQL in your function
+## A quick SQL cheat sheet
 
-Queries use `db.sql` with backticks:
+In the functions, SQL goes inside `` db.sql`...` ``. Always put values from the
+user inside `${ }`, which keeps your database safe.
 
-```js
-const items = await db.sql`SELECT * FROM items WHERE done = ${true}`;
-```
-
-Anything inside `${ }` is sent to the database **safely**, as data, not as SQL.
-**Always** put user input inside `${ }`. Never build SQL by gluing strings
-together like `"SELECT ... WHERE id = " + id`. That's how SQL injection attacks
-happen.
-
-`db.sql` always gives you back an **array of rows**, even if there's only one:
-
-```js
-const rows = await db.sql`SELECT * FROM items WHERE id = ${id}`;
-const item = rows[0]; // undefined if nothing matched
-```
-
-Use `RETURNING *` on `INSERT`, `UPDATE`, and `DELETE` to get the changed row back.
+| What you want          | SQL                                                  |
+| ---------------------- | ---------------------------------------------------- |
+| Get all items          | `SELECT * FROM items`                                |
+| Add an item            | `INSERT INTO items (title) VALUES (${data.title})`   |
+| Change an item         | `UPDATE items SET title = ${data.title} WHERE id = ${data.id}` |
+| Delete an item         | `DELETE FROM items WHERE id = ${data.id}`            |
 
 ---
 
-## Deploying (putting it live on the internet)
+## Something's not working?
 
-### Preview deploy (test it first)
-
-```bash
-npm run deploy:preview
-```
-
-The first time, the CLI asks you to create a new project or link an existing
-one. Choose **create a new project**. When it finishes, it prints a preview URL.
-
-Preview deploys are for checking that things work online. Data you add on a
-preview link may not show up on your live site.
-
-### Production deploy (the real, live site)
-
-```bash
-npm run deploy:prod
-```
-
-This publishes your live URL. On the **first** production deploy, Netlify
-creates your live database and runs your migrations automatically.
-
-> ⚠️ **Deploy to production sparingly.** The free Netlify plan comes with a
-> monthly budget of credits, and every production deploy uses some of it. Do
-> your building and testing with `npm run dev`, check with a preview deploy,
-> and only run `deploy:prod` when you have something worth publishing.
-
-### See your live data
-
-In the Netlify dashboard, open your project and go to **Data & Storage →
-Database**. You can view and edit the rows in your live database there.
+- **The list is empty and adding does nothing:** did you run `npm run db:migrate`?
+- **An error says `relation "items" does not exist`:** same thing, run `npm run db:migrate`.
+- **Something is broken:** look at the terminal running `npm run dev`. Errors are
+  printed there. You can also open the browser console (F12 → Console).
+- **Weird errors after installing:** check `node -v` is 22.13 or newer, delete the
+  `node_modules` folder, and run `npm install` again.
+- **My live site doesn't have my local items:** that's normal, they're separate databases.
 
 ---
 
-## Troubleshooting
+## Note
 
-**`npm run dev` says a command isn't found / weird errors after install**
-Check `node -v` is 22.13 or newer. Then delete the `node_modules` folder and run
-`npm install` again.
-
-**`relation "items" does not exist`**
-Your local database doesn't have the table yet. Run `npm run db:migrate` (with the
-dev server running).
-
-**`db:` commands say no database is running**
-Start `npm run dev` first, then run the command in a second terminal.
-
-**The page loads but the list shows an error**
-Look at the terminal running `npm run dev`. Server errors are printed there.
-Once deployed, find them in the Netlify dashboard under **Logs → Functions**.
-
-**My live site works but has none of my local data**
-That's expected. Your local database and your live database are completely
-separate.
-
-**I'm getting `Something went wrong on the server`**
-That's the function's catch-all error. The real error is in the dev server
-terminal (or the Functions log when deployed).
-
----
-
-## A note on security
-
-This starter has **no login**. Anyone with your site's URL can add, edit, or
-delete data. That's fine for a class project, but don't store anything private
-or personal in it.
+There's no login, so anyone with your link can change your data. Don't store
+anything private in it.
