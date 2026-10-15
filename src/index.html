@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRUD Starter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <h1>My Items</h1>
+
+    <!-- One form does double duty: Create when empty, Update when editing -->
+    <form id="item-form">
+      <input type="hidden" id="item-id">
+
+      <label for="title">Title</label>
+      <input type="text" id="title" required>
+
+      <label for="notes">Notes</label>
+      <textarea id="notes" rows="3"></textarea>
+
+      <div class="form-actions">
+        <button type="submit" id="submit-btn">Add item</button>
+        <button type="button" id="cancel-btn" hidden>Cancel</button>
+      </div>
+    </form>
+
+    <p id="message" role="status"></p>
+
+    <ul id="item-list"></ul>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

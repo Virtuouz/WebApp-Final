@@ -1,0 +1,28 @@
+{
+  "name": "crud-starter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Starter project: vanilla HTML/CSS/JS frontend + Netlify Functions + Netlify Database",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "login": "netlify login",
+    "link": "netlify link",
+    "dev": "netlify dev",
+    "db:migrate": "netlify database migrations apply",
+    "db:new": "netlify database migrations new --description",
+    "db:status": "netlify database status",
+    "db:query": "netlify database connect",
+    "db:reset": "netlify database reset",
+    "deploy:preview": "netlify deploy",
+    "deploy:prod": "netlify deploy --prod"
+  },
+  "dependencies": {
+    "@netlify/database": "^2.0.1"
+  },
+  "devDependencies": {
+    "netlify-cli": "^27.12.1"
+  }
+}

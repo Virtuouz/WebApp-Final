@@ -1,0 +1,9 @@
+# Tells Netlify where things live. You shouldn't need to change this.
+
+[build]
+  # The folder that gets published as your website
+  publish = "src"
+
+[functions]
+  # The folder that holds your serverless functions (your "backend")
+  directory = "netlify/functions"

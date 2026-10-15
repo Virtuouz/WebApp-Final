@@ -1,0 +1,19 @@
+# Dependencies (recreated by `npm install`)
+node_modules/
+
+# Netlify local state, local database, and link info
+.netlify/
+
+# Environment variables / secrets
+.env
+.env.*
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+npm-debug.log*
+*.log
